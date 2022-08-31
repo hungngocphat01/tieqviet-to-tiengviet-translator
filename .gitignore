@@ -1,0 +1,4 @@
+*.vi
+*.bh
+__pycache__/
+tieqviet
