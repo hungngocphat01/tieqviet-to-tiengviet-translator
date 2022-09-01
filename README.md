@@ -1,6 +1,7 @@
-<center>
+<div align="center">
 <h1>Hệ thống dịch máy từ <i>Tiếq Việt</i> sang <i>Tiếng Việt</i></h1>
-</center>
+<h3>Hệ wốq zịc máy từ <i>Tiếq Việt</i> saq <i>Tiếng Việt</i></h3>
+</div>
 
 # Vì sao lại có cái này?
 - Mình muốn làm một toy project để nghịch chút xíu để chuẩn bị cho khóa luận sắp tới về dịch máy thống kê (SMT).
@@ -12,19 +13,24 @@
 - Hệ thống dịch được sử dụng là [Moses](http://www2.statmt.org/moses/). Mô hình mình làm ở đây chỉ là baseline, không tune gì cả nhưng BLEU score được tận 95.93. Cũng dễ hiểu vì tiếq Việt và tiếng Việt vốn là... cùng một ngôn ngữ.
 
 # Ngữ liệu 
-- **Tiếng Việt**: ngữ liệu được lấy từ V1 [binhvq/news-corpus](https://github.com/binhvq/news-corpus) gồm khoảng 100 triệu câu. Mình chỉ sample ra khoảng 200.000 câu để đưa vào huấn luyện mô hình, 10.000 câu để test.
+- **Tiếng Việt**: ngữ liệu được lấy từ V1 [binhvq/news-corpus](https://github.com/binhvq/news-corpus) gồm khoảng 100 triệu câu.
 - **Tiếq Việt**: tổng hợp từ ngữ liệu tiếng Việt.
 
 # Thành phần trong repository này
-- `tieqviet.cpp`: module "dịch" từ tiếng Việt sang tiếq Việt, là bản port C++ của module [phanan/tieqviet](https://github.com/phanan/tieqviet).  
-  Vì sao lại C++? Để dịch vài trăm nghìn câu mà dùng scripting language chắc chờ mòn mỏi mới chạy xong (chưa dùng Perl).
+- `tieqviet.cpp`: module "dịch" từ tiếng Việt sang tiếq Việt, là bản port C++ của module [phanan/tieqviet](https://github.com/phanan/tieqviet).   
+  Regex của Python rất chậm nên mình không dùng Python để làm việc này.
 - `tok.py`: module thực hiện tokenize câu tiếng Việt. Cần cài dependency: `pip install underthesea`.
 
 # Chuẩn bị môi trường 
 
-1. Cài đặt moses. Ở đây cho nhanh thì mình sử dụng Docker image [amake/moses-smt](https://hub.docker.com/r/amake/moses-smt). Có thể pull về bằng câu lệnh: `docker pull amake/moses-smt:base`
+1. Cài đặt moses. Ở đây cho nhanh thì mình sử dụng Docker image [amake/moses-smt](https://hub.docker.com/r/amake/moses-smt).
+   ```bash
+   docker pull amake/moses-smt:base
+   ```
 
 # Sử dụng mô hình train sẵn 
+Đây là mô hình đã được mình train và binarize trên 200.000 câu sample từ tập dữ liệu trên, 10.000 câu để test với BLEU score 95.93.
+
 1. Tải file `tieqviet-tiengviet.tar.gz` ở mục releases.
 2. Chạy container
    ```bash 
@@ -51,8 +57,14 @@
 ## Chuẩn bị dữ liệu
 
 Trước tiên cần chuẩn bị thêm:
-1. Tạo một volume để chứa dữ liệu sau khi training, không bị mất sau khi thoát Docker: `docker volume create tieqviet`
-2. Biên dịch chương trình `tieqviet`: `g++ tieqviet.cpp -o tieqviet`
+1. Tạo một volume để chứa dữ liệu sau khi training, không bị mất sau khi thoát Docker
+   ```bash
+   docker volume create tieqviet
+   ```
+2. Biên dịch chương trình `tieqviet`:
+   ```bash
+   g++ tieqviet.cpp -o tieqviet
+   ```
 
 Để dễ minh họa, mình xin gọi file chứa corpus tiếng Việt gốc chúng ta đang có là `corpus.vi`.
 
@@ -63,12 +75,20 @@ Bước chuẩn bị dữ liệu gồm 3 bước nhỏ là:
 
 Ở đây vì tính "đặc biệt" của bài toán nên ta sẽ có một chút khác biệt ở phần tokenize, đó là thay vì chạy tokenizer trên cả 2 ngôn ngữ, thì ta sẽ chỉ chạy tokenize trên tiếng Việt, sau đó "dịch" corpus này sang tiếng Bùi Hiền. Lúc đó corpus tiếng BH thu được cũng đã được tokenize.
 
-1. Tokenize: `python3 tok.py corpus.vi corpus.tok.vi`
-2. Dịch sang tiếng Bùi Hiền: `./tieqviet corpus.tok.vi corpus.tok.bh`
+1. Tokenize: 
+   ```bash
+   python3 tok.py corpus.vi corpus.tok.vi
+   ```
+2. Dịch sang tiếng Bùi Hiền: 
+   ```bash 
+   ./tieqviet corpus.tok.vi corpus.tok.bh
+   ```
 
 3. Khởi động container và copy dữ liệu vào môi trường làm việc
-   
-  - `docker run --name tieqviet -itv tieqviet:/working amake/moses-smt:base /bin/bash`
+    ```bash 
+    docker run --name tieqviet -itv tieqviet:/working amake/moses-smt:base /bin/bash
+    ```
+
   - Tạo symlink cho thư mục chứa moses để dễ gọi:
     ```bash
     ln -s /opt/bin/moses ~/mosesdecoder 
@@ -117,7 +137,7 @@ Bước chuẩn bị dữ liệu gồm 3 bước nhỏ là:
       /working/corpus/corpus.clean 1 40
     ```
 
-## Train language model 
+## Train mô hình ngôn ngữ 
 
 Bài toán dịch máy thống kê từ câu `f` trong ngôn ngữ `F` sang ngôn ngữ `E` là bài toán tìm câu `e*` sao cho: `e* = argmax(e, p(e|f)) = argmax(e, p(f|e)p(e))`.
 
@@ -136,9 +156,9 @@ Language model cho ta ước lượng xác suất `p(e)`, tức là xác suất 
         corpus.arpa.vi \
         corpus.blm.vi
     ```
-## Train hệ thống dịch 
+## Train mô hình dịch 
 
-Hệ thống dịch (translation system) sẽ cho ta ước lượng của xác suất `p(f|e)` (likelihood).
+Mô hình dịch (translation model) sẽ cho ta ước lượng của xác suất `p(f|e)` (likelihood), tức xác suất mà câu gốc thực sự là bản dịch của câu ngôn ngữ đích.
 
 ```bash 
 cd /working
@@ -151,7 +171,7 @@ nice ~/mosesdecoder/scripts/training/train-model.perl -root-dir train      \
     -parallel                                                                   \
     -external-bin-dir ~/mosesdecoder/tools
 ```
-Quá trình train mất 22 phút trên laptop mình dùng Ryzen 5 4650U (6C12T), 16 GB RAM. Bạn có thể chỉnh số nhân dùng cho MGIZA bằng tham số `-mgiza-cpus`. Lưu ý, trên macOS và Windows thì Docker sẽ không được thoải mái sử dụng full tài nguyên host như trên Linux nên cần chú ý thiết lập lại để quá trình train diễn ra nhanh hơn.
+Quá trình train mất 22 phút trên laptop mình dùng Ryzen 5 4650U (6C12T), 16 GB RAM. Bạn có thể chỉnh số nhân CPU dùng cho MGIZA bằng tham số `-mgiza-cpus`. 
 
 ## Tuning 
 Xem thêm trong docs của [Moses](http://www2.statmt.org/moses/?n=Moses.Baseline).
