@@ -9,7 +9,7 @@
 - Để dịch từ _tiếng Việt_ sang _tiếq Việt_ thì khá dễ, cách đây vài năm đã có nhiều người viết các công cụ tương tự rồi. Dễ thấy, ánh xạ từ _tiếng Việt_ sang _tiếq Việt_ là one-to-one, có nghĩa là một chữ trong _tiếng Việt_ chỉ dịch ra được một chữ tương ứng trong _tiếq Việt_. Hệ thống dịch siêu đơn giản này được implement ở file [tieqviet.cpp](tieqviet.cpp).
 - Ngược lại, ánh xạ từ _tiếq Việt_ sang _tiếng Việt_ lại là one-to-many, ví dụ: _"cuq"_ có thể là _"trung"_ hoặc _"chung"_. Ta không thể tạo ra một hệ thống luật đơn giản để dịch được, mà phải dựa vào các từ xung quanh (ngữ cảnh). Ví dụ: _"cuq kư"_ thì chỉ có thể là _"chung cư"_.
 
-- Hệ thống dịch được sử dụng là [Moses](http://www2.statmt.org/moses/). Mô hình mình làm ở đây chỉ là baseline, không tune gì cả nhưng BLEU score là tân 95.93, khá ấn tượng.
+- Hệ thống dịch được sử dụng là [Moses](http://www2.statmt.org/moses/). Mô hình mình làm ở đây chỉ là baseline, không tune gì cả nhưng BLEU score được tận 95.93. Cũng dễ hiểu vì tiếq Việt và tiếng Việt vốn là... cùng một ngôn ngữ.
 
 # Ngữ liệu 
 - **Tiếng Việt**: ngữ liệu được lấy từ V1 [binhvq/news-corpus](https://github.com/binhvq/news-corpus) gồm khoảng 100 triệu câu. Mình chỉ sample ra khoảng 200.000 câu để đưa vào huấn luyện mô hình, 10.000 câu để test.
@@ -20,14 +20,39 @@
   Vì sao lại C++? Để dịch vài trăm nghìn câu mà dùng scripting language chắc chờ mòn mỏi mới chạy xong (chưa dùng Perl).
 - `tok.py`: module thực hiện tokenize câu tiếng Việt. Cần cài dependency: `pip install underthesea`.
 
-# Các bước xây dựng mô hình 
-## Chuẩn bị môi trường 
+# Chuẩn bị môi trường 
 
 1. Cài đặt moses. Ở đây cho nhanh thì mình sử dụng Docker image [amake/moses-smt](https://hub.docker.com/r/amake/moses-smt). Có thể pull về bằng câu lệnh: `docker pull amake/moses-smt:base`
-2. Tạo một volume để chứa dữ liệu sau khi training, không bị mất sau khi thoát Docker: `docker volume create tieqviet`
-3. Biên dịch chương trình `tieqviet`: `g++ tieqviet.cpp -o tieqviet`
 
+# Sử dụng mô hình train sẵn 
+1. Tải file `tieqviet-tiengviet.tar.gz` ở mục releases.
+2. Chạy container
+   ```bash 
+   docker run --name tieqviet --rm -it amake/moses-smt:base /bin/bash
+   ```
+3. Giải nén và copy model vào `~/binarised-model` trong container. 
+4. Tạo file `~/binarised-model/test.bh`, ghi mỗi câu tiếng Bùi Hiền trên 1 dòng. Lưu ý các câu này phải đúng "định dạng": các từ ghép phải có gạch dưới `_`, và các dấu câu phải cách các từ bên trái và bên phải bằng khoảng trắng. Một số ví dụ:
+
+    | Tiếq Việt | Tiếng Việt (được dịch) |
+    | -- | -- |
+    | Coq cườq_hợp kủa Ủy_ban , xi fải zải_cìn' các_n'iệm cướk Cín'_fủ qĩa_là họ n'ân_zan'_lợi_íc kủa Cín'_fủ | Trong trường_hợp của Ủy_ban , khi phải giải_trình trách_nhiệm trước Chính_phủ nghĩa_là họ nhân_danh_lợi_ích của Chính_phủ |
+    | Tôi là sin'_viên kủa cuờq Đại_họk Xoa_họk Tự_n'iên wàn'_fố Hồ_Cí_Min' | Tôi là sinh_viên của truờng **Đại_họk** Khoa_học Tự_nhiên thành_phố Hồ_Chí_Minh |
+    | Kousaka_Honoka là n'ân_vật cín' kủa hàq_loạt sản_fẩm kủa Love Live . Kô là họk_sin' năm hai kủa Cườq Kao cuq Otonokizaka . Honoka kó mái_tók màu kam buộk ở một bên dầu ( cừa fần tók_gáy ) và dôi mắt màu san' biển . Màu_sắk dại_ziện co kô là màu kam , dôi_xi kó một_số qười cọn màu hồq co kô . Kô là n'óm_cưởq kủa hai n'óm n'ạk : μ ' s và một fân n'óm kủa nó là Printemps . | Kousaka_Honoka là nhân_vật chính của hàng_loạt sản_phẩm của Love Live . Cô là học_sinh năm hai của Trường **Cao chung** Otonokizaka . Honoka có mái_tóc màu cam buộc ở một bên đầu ( chừa phần tóc_gáy ) và đôi mắt màu xanh biển . Màu_sắc đại_diện cho cô là màu cam , đôi_khi có một_số người chọn màu hồng cho cô . Cô là nhóm_trưởng của hai nhóm nhạc : μ ' x và một phân nhóm của nó là Printemps .
+
+5. Predict 
+   ```bash 
+   /opt/bin/moses/bin/moses                    \
+        -f ~/binarised-model/moses.ini         \
+        < ~/binarised-model/test.bh            \
+        > ~/binarised-model/test.predict.vi    
+   ```
+
+# Tự train mô hình
 ## Chuẩn bị dữ liệu
+
+Trước tiên cần chuẩn bị thêm:
+1. Tạo một volume để chứa dữ liệu sau khi training, không bị mất sau khi thoát Docker: `docker volume create tieqviet`
+2. Biên dịch chương trình `tieqviet`: `g++ tieqviet.cpp -o tieqviet`
 
 Để dễ minh họa, mình xin gọi file chứa corpus tiếng Việt gốc chúng ta đang có là `corpus.vi`.
 
@@ -163,15 +188,8 @@ Model thu được rất nặng, ta cần nén lại trước khi gọi moses de
     ~/mosesdecoder/bin/moses -f /working/binarised-model/moses.ini
     ```
 
-5. Nhập câu _tiếq Việt_ vào thôi. Lưu ý các câu này phải đúng "định dạng": các từ ghép phải có gạch dưới `_`, và các dấu câu phải cách các từ bên trái và bên phải bằng khoảng trắng.
+5. Nhập câu _tiếq Việt_ vào thôi. 
 
-Thử một số câu copy trên internet và tự nghĩ ra:
-
-| Tiếq Việt | Tiếng Việt (được dịch) |
-| -- | -- |
-| Coq cườq_hợp kủa Ủy_ban , xi fải zải_cìn' các_n'iệm cướk Cín'_fủ qĩa_là họ n'ân_zan'_lợi_íc kủa Cín'_fủ | Trong trường_hợp của Ủy_ban , khi phải giải_trình trách_nhiệm trước Chính_phủ nghĩa_là họ nhân_danh_lợi_ích của Chính_phủ |
-| Tôi là sin'_viên kủa cuờq Đại_họk Xoa_họk Tự_n'iên wàn'_fố Hồ_Cí_Min' | Tôi là sinh_viên của truờng **Đại_họk** Khoa_học Tự_nhiên thành_phố Hồ_Chí_Minh |
-| Kousaka_Honoka là n'ân_vật cín' kủa hàq_loạt sản_fẩm kủa Love Live . Kô là họk_sin' năm hai kủa Cườq Kao cuq Otonokizaka . Honoka kó mái_tók màu kam buộk ở một bên dầu ( cừa fần tók_gáy ) và dôi mắt màu san' biển . Màu_sắk dại_ziện co kô là màu kam , dôi_xi kó một_số qười cọn màu hồq co kô . Kô là n'óm_cưởq kủa hai n'óm n'ạk : μ ' s và một fân n'óm kủa nó là Printemps . | Kousaka_Honoka là nhân_vật chính của hàng_loạt sản_phẩm của Love Live . Cô là học_sinh năm hai của Trường **Cao chung** Otonokizaka . Honoka có mái_tóc màu cam buộc ở một bên đầu ( chừa phần tóc_gáy ) và đôi mắt màu xanh biển . Màu_sắc đại_diện cho cô là màu cam , đôi_khi có một_số người chọn màu hồng cho cô . Cô là nhóm_trưởng của hai nhóm nhạc : μ ' x và một phân nhóm của nó là Printemps .
 
 ## Test 
 Bằng cách tương tự, ta có thể sample một ít dữ liệu từ corpus gốc để làm test set (ở đây mình lấy 10.000 dòng).

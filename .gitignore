@@ -2,3 +2,4 @@
 *.bh
 __pycache__/
 tieqviet
+*.gz
