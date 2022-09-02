@@ -54,7 +54,12 @@
    ```
 
 # Tự train mô hình
-## Chuẩn bị dữ liệu
+## Sử dụng script có sẵn
+Script chỉ mới test trên container đã nói ở trên, chưa test trên các nơi khác. Script là _experimental_, có thể có những lỗi chưa kiểm tra hết.
+Mở script, chỉnh các thông tin về path cần thiết và chạy như bình thường.
+
+## Em yêu khoa học
+### Chuẩn bị dữ liệu
 
 Trước tiên cần chuẩn bị thêm:
 1. Tạo một volume để chứa dữ liệu sau khi training, không bị mất sau khi thoát Docker
@@ -137,7 +142,7 @@ Bước chuẩn bị dữ liệu gồm 3 bước nhỏ là:
       /working/corpus/corpus.clean 1 40
     ```
 
-## Train mô hình ngôn ngữ 
+### Train mô hình ngôn ngữ 
 
 Bài toán dịch máy thống kê từ câu `f` trong ngôn ngữ `F` sang ngôn ngữ `E` là bài toán tìm câu `e*` sao cho: `e* = argmax(e, p(e|f)) = argmax(e, p(f|e)p(e))`.
 
@@ -156,7 +161,7 @@ Language model cho ta ước lượng xác suất `p(e)`, tức là xác suất 
         corpus.arpa.vi \
         corpus.blm.vi
     ```
-## Train mô hình dịch 
+### Train mô hình dịch 
 
 Mô hình dịch (translation model) sẽ cho ta ước lượng của xác suất `p(f|e)` (likelihood), tức xác suất mà câu gốc thực sự là bản dịch của câu ngôn ngữ đích.
 
@@ -173,10 +178,10 @@ nice ~/mosesdecoder/scripts/training/train-model.perl -root-dir train      \
 ```
 Quá trình train mất 22 phút trên laptop mình dùng Ryzen 5 4650U (6C12T), 16 GB RAM. Bạn có thể chỉnh số nhân CPU dùng cho MGIZA bằng tham số `-mgiza-cpus`. 
 
-## Tuning 
+### Tuning 
 Xem thêm trong docs của [Moses](http://www2.statmt.org/moses/?n=Moses.Baseline).
 
-## Nén model 
+### Nén model 
 Model thu được rất nặng, ta cần nén lại trước khi gọi moses decoder. Nếu ta load mô hình raw lên thì máy sẽ bị tràn RAM (với RAM 16 GB của mình).
 
 1. Chạy các lệnh
@@ -211,7 +216,7 @@ Model thu được rất nặng, ta cần nén lại trước khi gọi moses de
 5. Nhập câu _tiếq Việt_ vào thôi. 
 
 
-## Test 
+### Test 
 Bằng cách tương tự, ta có thể sample một ít dữ liệu từ corpus gốc để làm test set (ở đây mình lấy 10.000 dòng).
 
 Giả sử 2 file test set mình có được là `test.tok.vi` và `test.tok.bh` 
